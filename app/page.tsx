@@ -2,18 +2,13 @@
 import Head from "next/head";
 import React, { useState, useEffect, useRef } from "react";
 
-// Define proper types for SpeechRecognition
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionResultList;
-}
+// Define types for SpeechRecognition
+type SpeechRecognitionType = {
+  new (): SpeechRecognitionInstance;
+  prototype: SpeechRecognitionInstance;
+};
 
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-  message: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-  new (): SpeechRecognition;
+interface SpeechRecognitionInstance extends EventTarget {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
@@ -25,17 +20,25 @@ interface SpeechRecognition extends EventTarget {
   onend: () => void;
 }
 
+interface SpeechRecognitionEvent {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+  message: string;
+}
+
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
-    speechSynthesis: SpeechSynthesis;
+    SpeechRecognition: SpeechRecognitionType;
+    webkitSpeechRecognition: SpeechRecognitionType;
   }
 }
 
 let _voices: SpeechSynthesisVoice[] = [];
 
-// Ensure we grab voices once they're loaded
+// Voice loading
 if (typeof window !== "undefined") {
   const synth = window.speechSynthesis;
   const loadVoices = () => {
@@ -45,7 +48,7 @@ if (typeof window !== "undefined") {
     }
   };
   synth.onvoiceschanged = loadVoices;
-  loadVoices(); // initial attempt
+  loadVoices();
 }
 
 interface Message {
@@ -63,19 +66,12 @@ const App = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
-  // 🎙️ Setup Speech Recognition
   useEffect(() => {
-    // Get the correct SpeechRecognition constructor
-    const SpeechRecognitionConstructor = (
-      window.SpeechRecognition || 
-      window.webkitSpeechRecognition || 
-      null
-    );
-
-    if (SpeechRecognitionConstructor) {
-      const recognition = new SpeechRecognitionConstructor();
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
       recognition.lang = "en-US";
       recognition.continuous = false;
       recognition.interimResults = false;
@@ -83,7 +79,7 @@ const App = () => {
       recognition.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
-        sendMessage(transcript); // Auto-send
+        sendMessage(transcript);
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -94,8 +90,6 @@ const App = () => {
       recognition.onend = () => setListening(false);
 
       recognitionRef.current = recognition;
-    } else {
-      console.warn("Speech Recognition API not supported in this browser");
     }
   }, []);
 
@@ -106,7 +100,6 @@ const App = () => {
     }
   };
 
-  // ... rest of the component remains the same ...
   const sendMessage = async (overrideInput?: string) => {
     const messageText = overrideInput || input;
     if (!messageText.trim()) return;
@@ -139,7 +132,7 @@ const App = () => {
       setMessages((prev) => [...prev, { role: "user", content: messageText }, reply]);
       setInput("");
 
-      // 🔊 Speak response
+      // Speak response
       speak(reply.content);
     } catch (error) {
       console.error("Error fetching from Groq API:", error);
@@ -170,22 +163,15 @@ const App = () => {
       }
 
       const pref = [
-        // Chrome / Edge
         "Google UK English Female", "Google US English Female",
-        // macOS Safari
         "Samantha", "Victoria",
-        // Windows (Edge/Firefox)
         "Microsoft Zira", "Microsoft Susan",
-        // Generic
         "Karen", "Anna", "Amelia"
       ];
 
-      // pick first matching preferred voice
       const voice =
         _voices.find(v => pref.some(name => v.name.includes(name))) ||
-        // next best: any female voice
         _voices.find(v => /female|woman/i.test(v.name)) ||
-        // last resort: default
         _voices[0];
 
       const u = new SpeechSynthesisUtterance(text);
@@ -262,7 +248,7 @@ const App = () => {
             </button>
           </div>
 
-          {/* 🎤 Voice Button Floating Bottom Right */}
+          {/* Voice Button */}
           <button
             className={`fixed bottom-6 right-6 sm:static sm:ml-auto w-14 h-14 rounded-full shadow-xl transition-colors ${
               listening ? "bg-red-400" : "bg-[#C7B8EA]"
