@@ -3,11 +3,6 @@ import Head from "next/head";
 
 import React, { useState, useEffect, useRef } from "react";
 
-// Add SpeechRecognition type for TypeScript
-const SpeechRecognition =
-  typeof window !== "undefined" &&
-  ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-
   let _voices: SpeechSynthesisVoice[] = [];
 
 // Ensure we grab voices once they're loaded
