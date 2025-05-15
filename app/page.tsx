@@ -3,6 +3,14 @@ import Head from "next/head";
 
 import React, { useState, useEffect, useRef } from "react";
 
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
+
   let _voices: SpeechSynthesisVoice[] = [];
 
 // Ensure we grab voices once they're loaded
@@ -37,9 +45,11 @@ const recognitionRef = useRef<SpeechRecognitionType | null>(null);
 
   // 🎙️ Setup Speech Recognition
   useEffect(() => {
-    const SpeechRecognition =
-      typeof window !== "undefined" &&
-      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+const SpeechRecognition =
+  typeof window !== "undefined"
+    ? window.SpeechRecognition || window.webkitSpeechRecognition
+    : undefined;
+
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.lang = "en-US";
