@@ -114,7 +114,7 @@ const App = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "compound-beta",
+          model: "meta-llama/llama-4-scout-17b-16e-instruct",
           messages: [...messages, { role: "user", content: messageText }],
         }),
       });
